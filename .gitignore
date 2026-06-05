@@ -1,0 +1,6 @@
+nul
+*.log
+__pycache__/
+*.exe
+.env
+.vscode/

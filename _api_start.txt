@@ -1,0 +1,2 @@
+creating thread
+thread alive=True

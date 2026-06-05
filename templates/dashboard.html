@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeetCode Auto-Solver</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen">
+  <div class="max-w-6xl mx-auto p-4">
+    <header class="flex items-center justify-between mb-6 pb-4 border-b border-gray-800">
+      <div class="flex items-center gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-green-400">LeetCode Auto-Solver</h1>
+          <p class="text-sm text-gray-500 mt-1"><span id="langLabel">Java</span> &middot; <span id="modelLabel">qwen/qwen3-coder</span></p>
+        </div>
+        <div id="profileSection" class="hidden flex items-center gap-3 pl-4 border-l border-gray-800">
+          <img id="avatar" class="w-8 h-8 rounded-full" src="" alt="">
+          <div>
+            <div id="username" class="text-sm font-bold text-gray-200"></div>
+            <div id="ranking" class="text-xs text-gray-500"></div>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/manual" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-sm">Manual Solve</a>
+        <a href="/history" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-sm">History</a>
+        <button id="startBtn" class="px-5 py-2 bg-green-600 hover:bg-green-500 rounded font-bold text-sm">START</button>
+        <button id="stopBtn" class="px-5 py-2 bg-red-600 hover:bg-red-500 rounded font-bold text-sm hidden">STOP</button>
+        <span id="statusBadge" class="px-3 py-1 rounded text-xs bg-gray-800 text-gray-400">Idle</span>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div class="bg-gray-900 rounded-lg p-4">
+        <div class="text-xs text-gray-500 mb-3">Session Stats</div>
+        <div class="grid grid-cols-4 gap-2">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-green-400" id="statAccepted">0</div>
+            <div class="text-xs text-gray-500">Accepted</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-red-400" id="statFailed">0</div>
+            <div class="text-xs text-gray-500">Failed</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-blue-400" id="statTotal">0</div>
+            <div class="text-xs text-gray-500">Total</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-yellow-400" id="statRate">0%</div>
+            <div class="text-xs text-gray-500">Rate</div>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-900 rounded-lg p-4">
+        <div class="text-xs text-gray-500 mb-3">Overall (LeetCode)</div>
+        <div class="grid grid-cols-3 gap-2" id="overallStats">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-gray-600">—</div>
+            <div class="text-xs text-gray-500">Easy</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-gray-600">—</div>
+            <div class="text-xs text-gray-500">Medium</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-gray-600">—</div>
+            <div class="text-xs text-gray-500">Hard</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="bg-gray-900 rounded-lg p-4">
+        <div class="text-xs text-gray-500 mb-2">Difficulty</div>
+        <div class="flex gap-2">
+          <button data-diff="Easy" class="diff-btn flex-1 px-3 py-2 rounded text-sm bg-gray-800 hover:bg-green-700">Easy</button>
+          <button data-diff="Medium" class="diff-btn flex-1 px-3 py-2 rounded text-sm bg-gray-800 hover:bg-yellow-700">Medium</button>
+          <button data-diff="Hard" class="diff-btn flex-1 px-3 py-2 rounded text-sm bg-gray-800 hover:bg-red-700">Hard</button>
+        </div>
+      </div>
+      <div class="bg-gray-900 rounded-lg p-4 col-span-2">
+        <div class="text-xs text-gray-500 mb-2">Current Problem</div>
+        <div id="currentProblem" class="text-sm text-gray-300">—</div>
+      </div>
+    </div>
+
+    <div class="bg-gray-900 rounded-lg p-4 mb-6">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs text-gray-500">Live Log</div>
+        <button onclick="document.getElementById('logContainer').innerHTML=''" class="text-xs text-gray-600 hover:text-gray-400">Clear</button>
+      </div>
+      <div id="logContainer" class="bg-black rounded p-3 h-96 overflow-y-auto text-sm leading-relaxed">
+        <div class="text-gray-600">Waiting...</div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <script>
+    const state = { difficulty: 'Hard', running: false };
+
+    function el(id) { return document.getElementById(id); }
+
+    function updateUI(s) {
+      el('statAccepted').textContent = s.stats.accepted;
+      el('statFailed').textContent = s.stats.failed;
+      el('statTotal').textContent = s.stats.total;
+      const rate = s.stats.total > 0 ? Math.round(s.stats.accepted / s.stats.total * 100) : 0;
+      el('statRate').textContent = rate + '%';
+      el('currentProblem').textContent = s.current_problem || '—';
+      state.difficulty = s.difficulty;
+      el('modelLabel').textContent = s.model;
+
+      document.querySelectorAll('.diff-btn').forEach(b => {
+        if (b.dataset.diff === s.difficulty) {
+          b.className = b.className.replace(/bg-\w+-\d+/g, '') + ' bg-gray-700 ring-2 ring-offset-1 ring-offset-gray-900 ring-gray-500';
+        } else {
+          b.className = b.className.replace(/ring-\S+/g, '').replace(/bg-\w+-\d+/g, '') + (b.dataset.diff === 'Easy' ? ' hover:bg-green-800 bg-gray-800' : b.dataset.diff === 'Medium' ? ' hover:bg-yellow-800 bg-gray-800' : ' hover:bg-red-800 bg-gray-800');
+        }
+      });
+
+      if (s.status === 'running') {
+        el('startBtn').classList.add('hidden');
+        el('stopBtn').classList.remove('hidden');
+        el('statusBadge').textContent = 'Running';
+        el('statusBadge').className = 'px-3 py-1 rounded text-xs bg-green-900 text-green-300';
+        state.running = true;
+      } else {
+        el('startBtn').classList.remove('hidden');
+        el('stopBtn').classList.add('hidden');
+        el('statusBadge').textContent = s.status === 'idle' ? 'Idle' : 'Stopped';
+        el('statusBadge').className = 'px-3 py-1 rounded text-xs bg-gray-800 text-gray-400';
+        state.running = false;
+      }
+    }
+
+    async function fetchProfile() {
+      try {
+        const r = await fetch('/api/profile');
+        if (!r.ok) return;
+        const p = await r.json();
+        if (!p) return;
+        el('profileSection').classList.remove('hidden');
+        el('username').textContent = p.username;
+        const prof = p.profile || {};
+        if (prof.userAvatar) el('avatar').src = prof.userAvatar;
+        el('ranking').textContent = 'Rank: ' + (prof.ranking || '?');
+        const stats = p.submitStats || {};
+        const ac = stats.acSubmissionNum || [];
+        const labels = ['Easy', 'Medium', 'Hard'];
+        const container = el('overallStats');
+        container.innerHTML = '';
+        labels.forEach((lbl) => {
+          const entry = ac.find(e => e.difficulty === lbl);
+          const count = entry ? entry.count : 0;
+          const colors = {'Easy': 'text-green-400', 'Medium': 'text-yellow-400', 'Hard': 'text-red-400'};
+          container.innerHTML += '<div class="text-center"><div class="text-2xl font-bold ' + colors[lbl] + '">' + count + '</div><div class="text-xs text-gray-500">' + lbl + '</div></div>';
+        });
+      } catch (e) {}
+    }
+
+    async function fetchState() {
+      try {
+        const r = await fetch('/api/state');
+        if (r.ok) updateUI(await r.json());
+      } catch (e) {}
+    }
+
+    async function api(path, method) {
+      try {
+        const r = await fetch(path, { method: method || 'POST' });
+        const d = await r.json();
+        if (d.ok) setTimeout(fetchState, 500);
+        return d;
+      } catch (e) { return { ok: false }; }
+    }
+
+    el('startBtn').addEventListener('click', () => api('/api/start'));
+    el('stopBtn').addEventListener('click', () => api('/api/stop'));
+
+    document.querySelectorAll('.diff-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        if (!state.running) {
+          fetchState();
+          return;
+        }
+        api('/api/difficulty/' + b.dataset.diff);
+      });
+    });
+
+    const logEl = el('logContainer');
+    const evtSource = new EventSource('/api/logs');
+    evtSource.onmessage = function(e) {
+      if (!e.data) return;
+      try {
+        const d = JSON.parse(e.data);
+        if (!d.msg) return;
+        const div = document.createElement('div');
+        div.textContent = d.msg;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+      } catch (_) {}
+    };
+
+    setInterval(fetchState, 2000);
+    fetchState();
+    fetchProfile();
+  </script>
+</body>
+</html>

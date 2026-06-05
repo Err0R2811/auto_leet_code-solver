@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Solve - LeetCode Auto-Solver</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen">
+  <div class="max-w-4xl mx-auto p-4">
+    <header class="flex items-center justify-between mb-6 pb-4 border-b border-gray-800">
+      <div class="flex items-center gap-4">
+        <h1 class="text-2xl font-bold text-green-400">Manual Solve</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-sm">&larr; Dashboard</a>
+      </div>
+    </header>
+
+    <div class="bg-gray-900 rounded-lg p-6 mb-6">
+      <label class="text-sm text-gray-400 mb-2 block">Problem Number, Slug, or URL</label>
+      <div class="flex gap-3">
+        <input id="slugInput" type="text" placeholder="e.g. 1  or  two-sum  or  https://leetcode.com/problems/two-sum/"
+          class="flex-1 bg-gray-800 border border-gray-700 rounded px-4 py-3 text-gray-200 text-sm focus:outline-none focus:border-green-500">
+        <button id="solveBtn" class="px-6 py-3 bg-green-600 hover:bg-green-500 rounded font-bold text-sm whitespace-nowrap">Solve</button>
+      </div>
+      <div id="statusMsg" class="mt-3 text-sm text-gray-500 hidden"></div>
+    </div>
+
+    <div class="bg-gray-900 rounded-lg p-4 mb-6">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs text-gray-500">Queue</div>
+        <span id="queueStatus" class="text-xs text-gray-600">0 queued</span>
+      </div>
+      <div id="queueList" class="text-sm text-gray-500">Empty</div>
+    </div>
+
+    <div class="bg-gray-900 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs text-gray-500">Live Log</div>
+        <button onclick="document.getElementById('logContainer').innerHTML=''" class="text-xs text-gray-600 hover:text-gray-400">Clear</button>
+      </div>
+      <div id="logContainer" class="bg-black rounded p-3 h-64 overflow-y-auto text-sm leading-relaxed">
+        <div class="text-gray-600">Waiting...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const slugInput = document.getElementById('slugInput');
+    const solveBtn = document.getElementById('solveBtn');
+    const statusMsg = document.getElementById('statusMsg');
+
+    async function submitSolve() {
+      let slug = slugInput.value.trim();
+      if (!slug) {
+        showStatus('Enter a problem slug or URL', 'text-red-400');
+        return;
+      }
+      solveBtn.disabled = true;
+      solveBtn.textContent = 'Queuing...';
+      showStatus('', '');
+      try {
+        const r = await fetch('/api/manual-solve', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({slug}),
+        });
+        const d = await r.json();
+        if (d.ok) {
+          showStatus('Solving! Check the live log below for progress.', 'text-green-400');
+          slugInput.value = '';
+          refreshQueue();
+        } else {
+          showStatus('Error: ' + (d.error || 'unknown'), 'text-red-400');
+        }
+      } catch (e) {
+        showStatus('Network error: ' + e.message, 'text-red-400');
+      } finally {
+        solveBtn.disabled = false;
+        solveBtn.textContent = 'Solve';
+      }
+    }
+
+    function showStatus(msg, cls) {
+      statusMsg.textContent = msg;
+      statusMsg.className = 'mt-3 text-sm ' + cls;
+      statusMsg.classList.toggle('hidden', !msg);
+    }
+
+    async function refreshQueue() {
+      try {
+        const r = await fetch('/api/state');
+        const s = await r.json();
+        const q = s.manual_queue || 0;
+        document.getElementById('queueStatus').textContent = q + ' queued';
+        document.getElementById('queueList').textContent = q > 0 ? q + ' problem(s) pending' : 'Empty';
+      } catch (_) {}
+    }
+
+    solveBtn.addEventListener('click', submitSolve);
+    slugInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitSolve(); });
+
+    const logEl = document.getElementById('logContainer');
+    const evtSource = new EventSource('/api/logs');
+    evtSource.onmessage = function(e) {
+      if (!e.data) return;
+      try {
+        const d = JSON.parse(e.data);
+        if (!d.msg) return;
+        const div = document.createElement('div');
+        div.textContent = d.msg;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+      } catch (_) {}
+    };
+
+    setInterval(refreshQueue, 3000);
+    refreshQueue();
+  </script>
+</body>
+</html>

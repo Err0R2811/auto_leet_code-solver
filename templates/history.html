@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>History - LeetCode Auto-Solver</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen">
+  <div class="max-w-6xl mx-auto p-4">
+    <header class="flex items-center justify-between mb-6 pb-4 border-b border-gray-800">
+      <div class="flex items-center gap-4">
+        <h1 class="text-2xl font-bold text-green-400">Submission History</h1>
+      </div>
+      <a href="/" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-sm">&larr; Dashboard</a>
+    </header>
+
+    <div id="historyContainer">
+      <div class="text-gray-600 text-sm">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    const history = {{ history | safe }};
+
+    function render() {
+      const container = document.getElementById('historyContainer');
+      if (!history.length) {
+        container.innerHTML = '<div class="text-gray-600 text-sm">No submissions yet.</div>';
+        return;
+      }
+      let html = '<div class="space-y-3">';
+      history.forEach((h, i) => {
+        const verdictColor = h.accepted ? 'text-green-400' : 'text-red-400';
+        const verdictBg = h.accepted ? 'bg-green-900/30 border-green-800' : 'bg-red-900/30 border-red-800';
+        const diffColor = h.difficulty === 'Easy' ? 'bg-green-700' : h.difficulty === 'Medium' ? 'bg-yellow-700' : 'bg-red-700';
+        const ts = new Date(h.ts * 1000).toLocaleString();
+        const code = h.code ? h.code.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+        const rid = 'hist-' + i;
+        html += '<div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">';
+        html += '<div class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-850" onclick="document.getElementById(\'' + rid + '\').classList.toggle(\'hidden\')">';
+        html += '<span class="' + verdictColor + ' font-bold text-lg">' + (h.accepted ? 'AC' : 'WA') + '</span>';
+        html += '<span class="px-2 py-0.5 rounded text-xs text-white ' + diffColor + '">' + h.difficulty + '</span>';
+        html += '<span class="text-gray-200 flex-1 font-medium">' + h.title + '</span>';
+        html += '<span class="text-gray-500 text-sm hidden md:inline">' + h.approach + '</span>';
+        html += '<span class="text-gray-600 text-sm">' + ts + '</span>';
+        html += '<svg class="w-4 h-4 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
+        html += '</div>';
+        html += '<div id="' + rid + '" class="hidden border-t border-gray-800">';
+        html += '<div class="grid grid-cols-3 gap-4 px-4 py-3 bg-gray-850 text-sm border-b border-gray-800">';
+        html += '<div><span class="text-gray-500">Verdict:</span> <span class="' + verdictColor + '">' + h.verdict + '</span></div>';
+        html += '<div><span class="text-gray-500">Attempt:</span> <span class="text-gray-300">' + (h.attempt || '?') + '</span></div>';
+        html += '<div><span class="text-gray-500">Time:</span> <span class="text-gray-300">' + (h.time || '—') + '</span></div>';
+        html += '<div><span class="text-gray-500">Space:</span> <span class="text-gray-300">' + (h.space || '—') + '</span></div>';
+        html += '<div><span class="text-gray-500">Slug:</span> <span class="text-gray-300">' + (h.slug || '—') + '</span></div>';
+        html += '<div><span class="text-gray-500">Timestamp:</span> <span class="text-gray-300">' + ts + '</span></div>';
+        html += '</div>';
+        html += '<div class="px-4 py-3">';
+        html += '<div class="text-xs text-gray-500 mb-2">Approach</div>';
+        html += '<div class="text-sm text-gray-300 mb-4">' + h.approach + '</div>';
+        html += '<div class="text-xs text-gray-500 mb-2">Code</div>';
+        html += '<pre class="text-sm text-gray-200 bg-black rounded p-4 overflow-x-auto max-h-96 overflow-y-auto" style="white-space:pre-wrap;font-family:monospace">' + code + '</pre>';
+        html += '</div></div></div>';
+      });
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    render();
+  </script>
+</body>
+</html>
